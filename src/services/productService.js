@@ -2,9 +2,21 @@ import cloudinary from "../config/Cloudinary.js";
 import Product from "../models/productModel.js";
 import CustomError from "../utils/customError.js";
 
-const getProducts = async () => {
-  const products = await Product.find();
-  if (!products) {
+const getProducts = async (query) => {
+  const { productName } = query;
+  let products;
+
+  if (productName) {
+    // Fetch related data based on the productName query parameter
+    products = await Product.find({
+      productName: new RegExp(productName, "i"),
+    });
+  } else {
+    // Fetch all data
+    products = await Product.find();
+  }
+
+  if (!products.length) {
     throw new CustomError("No products found", 404);
   }
   return products;
@@ -19,10 +31,7 @@ const getProductById = async (productId) => {
 };
 
 const createProduct = async (req) => {
-  const { quantity, productName, description } = req.body;
-
-  // Generate SKU randomly that will be unique and #CA-#NUMBERS
-  const SKU = "#CA-" + Math.random().toString(10).substring(2, 6);
+  const { quantity, productName, description, price, SKU } = req.body;
 
   // Check if SKU already exists
   const existingProductBySKU = await Product.findOne({ SKU });
@@ -59,6 +68,7 @@ const createProduct = async (req) => {
     productName,
     images: cloudinaryImages,
     description,
+    price,
   });
 
   try {
@@ -78,7 +88,7 @@ const createProduct = async (req) => {
 
 const updateProduct = async (req) => {
   const { productId } = req.params;
-  const { quantity, productName, description } = req.body;
+  const { quantity, productName, description, price, SKU } = req.body;
 
   const product = await Product.findById(productId);
   if (!product) {
@@ -88,6 +98,7 @@ const updateProduct = async (req) => {
   // Get file images
   let newImages = [];
   if (req.files && req.files.length > 0) {
+    console.log("req.files", req.files);
     const images = req.files.map((file) => file.path);
 
     // Save images into Cloudinary and get the URLs
@@ -118,6 +129,8 @@ const updateProduct = async (req) => {
   product.quantity = quantity || product.quantity;
   product.productName = productName || product.productName;
   product.description = description || product.description;
+  product.price = price || product.price;
+  product.SKU = SKU || product.SKU;
   product.images = newImages.length > 0 ? newImages : product.images;
 
   try {

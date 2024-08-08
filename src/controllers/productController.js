@@ -11,7 +11,8 @@ import { errorResponse, successResponse } from "../utils/response.js";
 
 const getProductsController = async (req, res) => {
   try {
-    const products = await getProducts();
+    const { query } = req;
+    const products = await getProducts(query);
     successResponse(res, products, "Products retrieved successfully");
   } catch (error) {
     if (error instanceof CustomError) {
